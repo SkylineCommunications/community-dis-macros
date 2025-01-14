@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<DisMacro xmlns="http://www.skyline.be/dis">
+  <Description></Description>
+  <Author>SKYLINE2/BlakeSM</Author>
+  <Script>
+    <Code><![CDATA[using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using SLDisMacros.Interfaces;
+
+public class Script
+{
+    public static void Run(IEngine engine)
+    {
+        string filePath = Convert.ToString(engine.ShowInputBox("File directory? (File will be called SavedList.txt)", "File Directory", @"C:\Skyline_Data"));
+
+		if (!Directory.Exists(filePath))
+		{
+            engine.LogToOutputWindow("File Directory does not exist");
+			return;
+        }
+
+        var parameters = engine.Input?.ProtocolModel?.Protocol?.Params;
+		if (parameters == null)
+		{
+			engine.LogToOutputWindow("The input protocol contains no Params tag.");
+			return;
+		}
+
+		List<string> Oids = parameters.Where(x => x.SNMP != null).Select(x => x.SNMP.OID.Value).ToList();
+
+		TextWriter tw = new StreamWriter(Path.Combine(filePath, "SavedList.txt"));
+
+		foreach (String s in Oids)
+			tw.WriteLine(s);
+
+		tw.Close();
+
+	}
+}]]></Code>
+  </Script>
+</DisMacro>

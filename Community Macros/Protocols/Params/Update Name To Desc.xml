@@ -1,0 +1,128 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<DisMacro xmlns="http://www.skyline.be/dis">
+  <Description>Updates Param.Name with camelCase of Param Descriptions. Perfect for when creating parameters with MIB, all that is required is to update the displayed name</Description>
+  <Author>SKYLINE2/GBO</Author>
+  <Script>
+    <Code><![CDATA[using Skyline.DataMiner.CICD.Models.Protocol.Read;
+using SLDisMacros.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+
+public class Script
+{
+	public static void Run(IEngine engine)
+	{
+        string tableName = Convert.ToString(engine.ShowInputBox("Table Name? (Leave blank if updating standalone Parameter(s))", "Table Name", String.Empty));
+        UpdateNames(engine, tableName);
+	}
+
+    public static void UpdateNames(IEngine engine, string tableName)
+    {
+        var parameters = engine.Input?.ProtocolModel?.Protocol?.Params;
+        if (parameters == null)
+        {
+            engine.LogToOutputWindow("The input protocol contains no Params tag.");
+            return;
+        }
+
+        int updateParamsCounter = 0;
+
+        if (String.IsNullOrEmpty(tableName))
+        {
+            foreach (var param in parameters)
+            {
+                if (engine.Input.OverlapsWithSelection(param))
+                {
+                    var editParam = engine.ProtocolEdit.Protocol.Params.Get(param);
+
+                    var paramDescriptionParts = editParam.Description.Value.Split(' ');
+
+                    editParam.Name = CamelCaseStringParts(paramDescriptionParts);
+                    updateParamsCounter++;
+                }
+            }
+        }
+        else
+        {
+            var camelCaseTableName = CamelCaseStringParts(tableName.Split(' '));
+            foreach (var param in parameters)
+            {
+                if (engine.Input.OverlapsWithSelection(param))
+                {
+                    if (param.Type.Value == Skyline.DataMiner.CICD.Models.Protocol.Enums.EnumParamType.Array)
+                    {
+                        continue;
+                    }
+
+                    var editParam = engine.ProtocolEdit.Protocol.Params.Get(param);
+
+                    var paramDescriptionNoTableParts = editParam.Description.Value.Split('(');
+                    var paramDescriptionNoTable = paramDescriptionNoTableParts[0].Trim();
+
+                    var paramDescriptionParts = paramDescriptionNoTable.Split(' ');
+
+                    editParam.Name = camelCaseTableName + PascalCaseStringParts(paramDescriptionParts);
+
+                    if (paramDescriptionNoTableParts.Length == 1)
+                    {
+                        editParam.Description = paramDescriptionNoTable + " (" + tableName + ")";
+                    }
+
+                    updateParamsCounter++;
+                }
+            }
+        }
+		
+        
+
+        engine.LogToOutputWindow(updateParamsCounter + " parameters have been updated.");
+    }
+
+    private static string CamelCaseStringParts(string[] paramDescriptionParts)
+    {
+        var descriptionCamelCase = new StringBuilder();
+        for (int i = 0; i < paramDescriptionParts.Length; i++)
+        {
+            if (i == 0)
+            {
+                descriptionCamelCase.Append(paramDescriptionParts[i].ToLower());
+            }
+            else
+            {
+                if (paramDescriptionParts[i].Length == 1)
+                {
+                    descriptionCamelCase.Append(paramDescriptionParts[i].ToUpper());
+                }
+                else
+                {
+                    descriptionCamelCase.Append(Char.ToUpper(paramDescriptionParts[i][0]) + paramDescriptionParts[i].Substring(1).ToLower());
+                }
+            }
+        }
+
+        return descriptionCamelCase.ToString();
+    }
+
+    private static string PascalCaseStringParts(string[] paramDescriptionParts)
+    {
+        var descriptionCamelCase = new StringBuilder();
+        for (int i = 0; i < paramDescriptionParts.Length; i++)
+        {
+            if (paramDescriptionParts[i].Length == 1)
+            {
+                descriptionCamelCase.Append(paramDescriptionParts[i].ToUpper());
+            }
+            else
+            {
+                descriptionCamelCase.Append(Char.ToUpper(paramDescriptionParts[i][0]) + paramDescriptionParts[i].Substring(1).ToLower());
+            }
+        }
+
+        return descriptionCamelCase.ToString();
+    }
+}]]></Code>
+  </Script>
+</DisMacro>
