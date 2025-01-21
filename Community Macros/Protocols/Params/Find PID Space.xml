@@ -1,0 +1,79 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<DisMacro xmlns="http://www.skyline.be/dis">
+  <Description>Finds a space in PID ID's when creating new PID's. Can be used to find a large gap in ID's if needed for multiple grouped parameters or tables</Description>
+  <Author>SKYLINE2/GBO</Author>
+  <Script>
+    <Code><![CDATA[using Skyline.DataMiner.CICD.Models.Protocol.Read;
+using SLDisMacros.Interfaces;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+
+public class Script
+{
+	public static void Run(IEngine engine)
+	{
+        var pidChunk = Convert.ToInt32(engine.ShowInputBox("How many consecutive ID's do you need?", "Number of PIDs", "1"));
+        FindStartPid(engine, pidChunk);
+	}
+
+    public static void FindStartPid(IEngine engine, int pidChunk)
+    {
+        var parameters = engine.Input?.ProtocolModel?.Protocol?.Params;
+        if (parameters == null)
+        {
+            engine.LogToOutputWindow("The input protocol contains no Params tag.");
+            return;
+        }
+
+        var chunkCounter = 0;
+        if (engine.Input.SelectedTextSpans.Any())
+        {
+            var selectedIds = new HashSet<int>(parameters.Where(x => engine.Input.OverlapsWithSelection(x)).Select(x => (int)x.Id.Value));
+            var nextPid = selectedIds.Min();
+            var startPid = nextPid;
+            while (chunkCounter < pidChunk)
+            {
+                if (selectedIds.Contains(nextPid))
+                {
+                    nextPid++;
+                    startPid = nextPid;
+                    chunkCounter = 0;
+                }
+                else
+                {
+                    nextPid++;
+                    chunkCounter++;
+                }
+            }
+
+            engine.LogToOutputWindow("You can start creating your parameters starting with PID " + startPid);
+        }
+        else
+        {
+            var selectedIds = new HashSet<int>(parameters.Select(x => (int)x.Id.Value));
+            var nextPid = selectedIds.Min();
+            var startPid = nextPid;
+            while (chunkCounter < pidChunk)
+            {
+                if (selectedIds.Contains(nextPid))
+                {
+                    nextPid++;
+                    startPid = nextPid;
+                    chunkCounter = 0;
+                }
+                else
+                {
+                    nextPid++;
+                    chunkCounter++;
+                }
+            }
+
+            engine.LogToOutputWindow("You can start creating your parameters starting with PID " + startPid);
+        }
+    }
+}]]></Code>
+  </Script>
+</DisMacro>
